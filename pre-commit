@@ -3,7 +3,7 @@
 # Pre-commit hook script for Unity to check that we never forget to add .meta files
 
 exitCode=0
-staged_files=$(git diff --name-only --cached)
+staged_files=$(git diff --name-only --cached) # get all to be independent of working dir
 for staged_file in $staged_files
 do
 	if [[ $staged_file == Assets/* ]] # wildcard matching
