@@ -1,0 +1,59 @@
+#!/bin/bash
+# 
+# Pre-commit hook script for Unity to check that we never forget to add .meta files
+
+exitCode=0
+staged_files=$(git diff --name-only --cached)
+for staged_file in $staged_files
+do
+	if [[ $staged_file == Assets/* ]] # wildcard matching
+	then
+		if [[ $staged_file == *.meta ]]
+		then
+			# check if corresponding file or dir exists
+			no_ext=${staged_file%.meta}
+			git ls-files --error-unmatch $no_ext &> /dev/null
+			if [[ $? -ne 0 ]]
+			then
+				# corresponding file does not even exist or is untracked
+				echo "weird: no corresponding non-meta for meta file $staged_file"
+				exitCode=1
+			else
+				git ls-files --error-unmatch --modified $no_ext &> /dev/null
+				if [[ $? -eq 0 ]]
+				then
+					# corresponding file has been changed but not staged for commit - probably the most common case
+					echo "corresponding non-meta for $staged_file has not been staged for commit"
+					exitCode=1
+				fi
+			fi
+		else
+			with_ext="${staged_file}.meta"
+			git ls-files --error-unmatch $with_ext &> /dev/null
+			if [[ $? -ne 0 ]]
+			then
+				echo "no corresponding meta file for file $staged_file"
+				exitCode=1
+			else
+				git ls-files --error-unmatch --modified $with_ext &> /dev/null
+				if [[ $? -eq 0 ]]
+				then
+					# corresponding file has been changed but not staged for commit - probably the most common case
+					echo "corresponding meta file for $staged_file has not been staged for commit"
+					exitCode=1
+				fi
+			fi
+		fi
+	# otherwise, ignore file
+	fi
+done
+
+if [[ exitCode -eq 1 ]]
+then
+	exit 1
+elif [[ exitCode -eq 0 ]]
+then
+	exit 0
+fi
+
+exit 2
